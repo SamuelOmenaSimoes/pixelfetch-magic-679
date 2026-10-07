@@ -11,7 +11,12 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "start": "node --env-file-if-exists=.env.local .output/server/index.mjs",
+    "setup": "node scripts/setup.mjs",
+    "backup": "node --env-file-if-exists=.env.local scripts/backup.mjs",
+    "test:production": "node scripts/smoke.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -92,5 +97,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=24.11.0 <25"
   }
 }

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -13,8 +13,19 @@ const nav = [
 ];
 
 export function Header() {
+  const path = useRouterState({ select: (state) => state.location.href });
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(false);
+  }, [path]);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, []);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 40);
     on();
@@ -50,9 +61,10 @@ export function Header() {
             Comece agora
           </Link>
           <button
-            className="grid h-10 w-10 place-items-center lg:hidden"
+            className="grid h-10 w-10 shrink-0 place-items-center lg:hidden"
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
+            aria-controls="menu-movel"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? <X /> : <Menu />}
@@ -60,7 +72,11 @@ export function Header() {
         </div>
       </div>
       {open && (
-        <nav className="border-t px-4 pb-6 lg:hidden" aria-label="Menu móvel">
+        <nav
+          id="menu-movel"
+          className="max-h-[calc(100svh-4rem)] overflow-y-auto border-t px-4 pb-6 lg:hidden"
+          aria-label="Menu móvel"
+        >
           {[...nav, { label: "Contato", hash: "contato" }].map((n) => (
             <Link
               key={n.hash}
