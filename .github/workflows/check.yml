@@ -3,6 +3,21 @@ on: [push, pull_request]
 jobs:
   check:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: topfit
+          POSTGRES_PASSWORD: ci-disposable-only
+          POSTGRES_DB: topfit_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://topfit:ci-disposable-only@localhost:5432/topfit_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,3 +29,6 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run test:production
+      - run: npm run build:vercel
+      - run: node scripts/check-vercel.mjs

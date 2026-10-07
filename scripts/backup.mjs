@@ -1,3 +1,7 @@
+if (process.env.DATABASE_URL)
+  throw new Error(
+    "Para PostgreSQL, use backup do provedor ou pg_dump. Este script atende somente SQLite.",
+  );
 import { DatabaseSync, backup } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";

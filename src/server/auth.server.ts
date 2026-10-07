@@ -1,6 +1,6 @@
 import { randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { database, digest } from "./store.server";
+import { query, digest } from "./store.server";
 const scrypt = promisify(nodeScrypt);
 export function adminHash() {
   return process.env["TOPFIT_ADMIN_PASSWORD_HASH"] || "";
@@ -16,12 +16,14 @@ export function sessionCookie(request: Request, token: string, clear = false) {
   const secure = new URL(process.env["TOPFIT_SITE_URL"] || request.url).protocol === "https:";
   return `topfit_session=${token}; Path=/api; HttpOnly; SameSite=Strict; Max-Age=${clear ? 0 : 28800}${secure ? "; Secure" : ""}`;
 }
-export function newSession() {
+export async function newSession() {
   const token = randomBytes(32).toString("hex");
-  database().prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
-  database()
-    .prepare("INSERT INTO sessions(token_hash,expires_at,auth_version) VALUES(?,?,?)")
-    .run(digest(token), Date.now() + 8 * 60 * 60_000, digest(adminHash()));
+  await query("DELETE FROM sessions WHERE expires_at <= ?", [Date.now()]);
+  await query("INSERT INTO sessions(token_hash,expires_at,auth_version) VALUES(?,?,?)", [
+    digest(token),
+    Date.now() + 8 * 60 * 60_000,
+    digest(adminHash()),
+  ]);
   return token;
 }
 export function requestToken(request: Request) {
@@ -30,17 +32,16 @@ export function requestToken(request: Request) {
     ""
   );
 }
-export function authenticated(request: Request) {
+export async function authenticated(request: Request) {
   const token = requestToken(request);
   if (!token || !adminHash()) return false;
-  return !!database()
-    .prepare(
+  return !!(
+    await query(
       "SELECT token_hash FROM sessions WHERE token_hash=? AND expires_at>? AND auth_version=?",
+      [digest(token), Date.now(), digest(adminHash())],
     )
-    .get(digest(token), Date.now(), digest(adminHash()));
+  ).rows.length;
 }
-export function revoke(request: Request) {
-  database()
-    .prepare("DELETE FROM sessions WHERE token_hash=?")
-    .run(digest(requestToken(request)));
+export async function revoke(request: Request) {
+  await query("DELETE FROM sessions WHERE token_hash=?", [digest(requestToken(request))]);
 }

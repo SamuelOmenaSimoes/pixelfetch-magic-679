@@ -25,19 +25,32 @@ node scripts/smoke.mjs
 
 Smoke usa dados sintéticos em pasta temporária, porta 4181. Verifica HTTP da versão compilada, autenticação, persistência após reiniciar, duplicidade, atualização e backup. Remove somente sua própria pasta.
 
-## Publicação
+## Publicação na Vercel
 
-Esta versão usa **Node.js com SQLite em disco persistente**, Nitro `node-server`. Não é pacote estático nem compatível diretamente com Cloudflare Workers/Lovable sem adaptar banco e runtime. O Dockerfile oferece alternativa para hospedagem Node; Docker não foi executado neste ambiente.
+O build Vercel usa Nitro `vercel` e gera `.vercel/output/config.json`, arquivos públicos e uma função Node.js 24. O vercel.json substitui a configuração antiga que procurava `dist`. Não aponte o deploy apenas para arquivos estáticos: SSR e APIs usam a função.
 
-Configure as variáveis de `.env.example` no servidor. TOPFIT_SITE_URL precisa ser a origem pública HTTPS exata. TOPFIT_DATA_DIR deve ser um volume persistente fora da pasta pública. Copie o hash gerado pelo setup para o gerenciador de segredos da hospedagem; não use valores de exemplo como configuração final. Use uma instância com esse volume; múltiplas instâncias exigem estratégia de banco compartilhado.
+1. Na Vercel, abra o projeto, vá a Storage/Marketplace e conecte um PostgreSQL (por exemplo, Neon). Escolha o plano conforme as condições do provedor, sem contratar serviços automaticamente. Use banco separado para Preview e Production.
+2. Confira a variável **DATABASE_URL** fornecida pela integração (conexão pooled com SSL). Nunca use prefixo VITE_ nem publique a URL no GitHub/chat.
+3. Execute `npm run setup` localmente e configure **TOPFIT_ADMIN_PASSWORD_HASH** nas variáveis seguras da Vercel. Guarde a senha exibida; copie somente o hash de .env.local. Configure **TOPFIT_SITE_URL** com a origem HTTPS real de produção, sem caminho.
+4. Para aplicar as tabelas, em ambiente seguro configure DATABASE_URL do banco desejado e execute `npm run db:migrate`. Alternativamente execute migrations/001-attendance.sql no editor SQL do provedor. A migração é idempotente e não deve rodar durante build de Preview com credenciais de produção.
+5. Faça redeploy da branch. O repositório define `npm ci`, `npm run build:vercel` e `.vercel/output`. Se houver override manual antigo, remova `dist` dos ajustes do projeto. Em Preview a origem permitida vem de VERCEL_URL; produção usa TOPFIT_SITE_URL.
+6. Valide no endereço publicado: página inicial, unidades, envio real de solicitação, login /admin, leitura e atualização. Confirme persistência após novo deploy.
 
-Use HTTPS e restrinja o acesso ao volume. Sessões de 8 horas com HttpOnly/SameSite Strict, Secure sob HTTPS. APIs privadas exigem sessão, escrita exige origem autorizada, JSON limitado e validação. Limites globais de envios/login e por celular são proteção inicial; não substituem proteção de borda contra ataques distribuídos.
+Na Vercel **não há fallback para SQLite**. Sem DATABASE_URL ou tabelas, o site e catálogo continuam disponíveis, mas formulários retornam erro controlado e nunca mostram pedido salvo. Não foi criado/conectado um banco na conta do proprietário, nem validado o deploy público.
 
-## Backup
+Pedidos, sessões e limites usam PostgreSQL quando DATABASE_URL está configurada. Inserção usa transação e locks por solicitação/telefone para evitar duplicidade e corrida entre funções. O pool é limitado e não desativa validação TLS. Sessões duram 8 horas; cookies HttpOnly/SameSite Strict e Secure sob HTTPS.
 
-`npm run backup` faz cópia consistente do SQLite. Configure TOPFIT_BACKUP_DIR fora da pasta pública. Agende na hospedagem e mantenha cópia protegida externa. O script é manual, sem agendamento ou armazenamento externo automático.
+## Desenvolvimento local e backups
 
-Para restaurar: pare o servidor; preserve cópia do banco atual e arquivos WAL/SHM; substitua o conjunto pelo backup como topfit.sqlite em TOPFIT_DATA_DIR, confirme permissões e reinicie. Teste restauração em ambiente separado antes de produção.
+Sem DATABASE_URL, fora da Vercel, o desenvolvimento continua usando SQLite. Build Node local: `npm run build`, seguido de `npm start`. O Dockerfile também usa Node local; não foi executado neste ambiente. Para PostgreSQL local, configure DATABASE_URL e execute a migração.
+
+`npm run backup` é **exclusivo para SQLite**, com TOPFIT_DATA_DIR/TOPFIT_BACKUP_DIR. Para PostgreSQL, configure backups e recuperação no provedor e/ou pg_dump, mantenha cópia protegida e teste restauração. Não há backup remoto/agendamento automático implementado.
+
+SQLite e PostgreSQL são bases distintas: esta mudança não copia registros existentes automaticamente. Nenhum dado de produção foi recebido. Se houver base SQLite real a migrar, preserve backup e planeje importação antes de trocar.
+
+## Testes de deploy
+
+`npm run build:vercel` e `node scripts/check-vercel.mjs` verificam pacote, runtime, SSR, catálogo e falha segura sem banco. A CI cria PostgreSQL 16 descartável e executa testes de gravação, login, persistência após reconectar, alteração/exclusão, concorrência, idempotência e limites. Localmente os testes PostgreSQL ficam ignorados sem TEST_DATABASE_URL; somente aceita banco topfit_test em localhost/127.0.0.1, nunca produção.
 
 ## Atendimento e limites
 
@@ -58,4 +71,4 @@ Pendentes de informação oficial: endereços, grade, mensalidades posteriores, 
 
 10 testes passaram. TypeScript sem erros; lint sem erros, com 7 avisos de Fast Refresh. Build Node concluído. Smoke de produção local passou. Navegador: validação, matrícula Alvorada, experimental crossfit, links, seleção Santo Antônio, menu móvel/Escape e layout 390px verificados. Nenhuma mensagem enviada pelo WhatsApp.
 
-A versão pública não foi atualizada nem validada. Falta definir/acessar hospedagem, configurar domínio/HTTPS/volume/segredos e repetir os fluxos no endereço final.
+Build Vercel e verificação do handler gerado passaram localmente. A publicação pública depende de criar/conectar o PostgreSQL, aplicar tabelas e configurar variáveis na conta Vercel. Não foi validada ao vivo.

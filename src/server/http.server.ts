@@ -2,7 +2,7 @@ import { loadEnvFile } from "node:process";
 import { z } from "zod";
 import { requestSchema, statuses, statusSchema } from "@/lib/contact-schema";
 import { plans, units, CROSSFIT_WHATSAPP, whatsappLink } from "@/data/topfit";
-import { consumeLimit, database, listContacts, saveContact } from "./store.server";
+import { consumeLimit, query, listContacts, saveContact } from "./store.server";
 import {
   adminHash,
   authenticated,
@@ -60,17 +60,20 @@ export async function handleApi(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/$/, "");
   const write = request.method !== "GET" && request.method !== "HEAD";
-  if (write) {
-    const allowed = process.env["TOPFIT_SITE_URL"]
-      ? new URL(process.env["TOPFIT_SITE_URL"]!).origin
-      : url.origin;
-    if (
-      request.headers.get("origin") !== allowed ||
-      request.headers.get("sec-fetch-site") === "cross-site"
-    )
-      return json({ error: "Origem não autorizada." }, 403);
-  }
   try {
+    if (write) {
+      const configuredOrigin =
+        process.env["VERCEL_ENV"] === "preview" && process.env["VERCEL_URL"]
+          ? `https://${process.env["VERCEL_URL"]}`
+          : process.env["TOPFIT_SITE_URL"] ||
+            (process.env["VERCEL_URL"] ? `https://${process.env["VERCEL_URL"]}` : url.origin);
+      const allowed = new URL(configuredOrigin).origin;
+      if (
+        request.headers.get("origin") !== allowed ||
+        request.headers.get("sec-fetch-site") === "cross-site"
+      )
+        return json({ error: "Origem não autorizada." }, 403);
+    }
     if (path === "/api/catalog" && request.method === "GET")
       return json({
         units: units.map(({ slug, name, neighborhood, whatsapp }) => ({
@@ -82,7 +85,7 @@ export async function handleApi(request: Request): Promise<Response> {
         plans,
       });
     if (path === "/api/requests" && request.method === "POST") {
-      if (!consumeLimit("submissions", 120, 60_000))
+      if (!(await consumeLimit("submissions", 120, 60_000)))
         return json({ error: "Muitas solicitações. Tente novamente em um minuto." }, 429, {
           "Retry-After": "60",
         });
@@ -92,7 +95,7 @@ export async function handleApi(request: Request): Promise<Response> {
           { error: "Revise os campos indicados.", fields: parsed.error.flatten().fieldErrors },
           400,
         );
-      const result = saveContact(parsed.data);
+      const result = await saveContact(parsed.data);
       if (!result)
         return json(
           { error: "Esta solicitação foi alterada. Atualize a página antes de reenviar." },
@@ -111,12 +114,12 @@ export async function handleApi(request: Request): Promise<Response> {
     }
     if (path === "/api/admin/session") {
       if (request.method === "GET")
-        return authenticated(request)
+        return (await authenticated(request))
           ? json({ authenticated: true })
           : json({ error: "Faça login para continuar." }, 401);
       if (request.method === "POST") {
         if (!adminHash()) return json({ error: "Acesso administrativo não configurado." }, 503);
-        if (!consumeLimit("login", 10, 15 * 60_000))
+        if (!(await consumeLimit("login", 10, 15 * 60_000)))
           return json({ error: "Muitas tentativas. Aguarde 15 minutos." }, 429, {
             "Retry-After": "900",
           });
@@ -127,16 +130,17 @@ export async function handleApi(request: Request): Promise<Response> {
         if (!parsed.success || !(await verifyPassword(parsed.data.password)))
           return json({ error: "Credenciais inválidas." }, 401);
         return json({ authenticated: true }, 200, {
-          "Set-Cookie": sessionCookie(request, newSession()),
+          "Set-Cookie": sessionCookie(request, await newSession()),
         });
       }
       if (request.method === "DELETE") {
-        revoke(request);
+        await revoke(request);
         return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(request, "", true) });
       }
     }
     if (path.startsWith("/api/admin/")) {
-      if (!authenticated(request)) return json({ error: "Faça login para continuar." }, 401);
+      if (!(await authenticated(request)))
+        return json({ error: "Faça login para continuar." }, 401);
       if (path === "/api/admin/requests" && request.method === "GET") {
         const status = url.searchParams.get("status") || "";
         if (status && !statuses.some((s) => s === status))
@@ -148,23 +152,24 @@ export async function handleApi(request: Request): Promise<Response> {
           .max(100000)
           .safeParse(url.searchParams.get("page") || "1");
         if (!page.success) return json({ error: "Página inválida." }, 400);
-        return json(listContacts(status, page.data));
+        return json(await listContacts(status, page.data));
       }
       const id = path.split("/").at(-1) || "";
       if (path.startsWith("/api/admin/requests/") && z.string().uuid().safeParse(id).success) {
         if (request.method === "PATCH") {
           const parsed = statusSchema.safeParse(await readJson(request));
           if (!parsed.success) return json({ error: "Status inválido." }, 400);
-          const result = database()
-            .prepare("UPDATE contacts SET status=? WHERE id=?")
-            .run(parsed.data.status, id);
-          return Number(result.changes)
+          const result = await query("UPDATE contacts SET status=? WHERE id=?", [
+            parsed.data.status,
+            id,
+          ]);
+          return Number(result.rowCount)
             ? json({ ok: true })
             : json({ error: "Solicitação não encontrada." }, 404);
         }
         if (request.method === "DELETE") {
-          const result = database().prepare("DELETE FROM contacts WHERE id=?").run(id);
-          return Number(result.changes)
+          const result = await query("DELETE FROM contacts WHERE id=?", [id]);
+          return Number(result.rowCount)
             ? json({ ok: true })
             : json({ error: "Solicitação não encontrada." }, 404);
         }

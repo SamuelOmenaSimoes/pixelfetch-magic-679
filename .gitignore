@@ -40,3 +40,4 @@ backups/
 *.sqlite
 *.sqlite-*
 .data-*/
+.vercel/
