@@ -11,13 +11,21 @@ export function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-5">
         <div className="md:col-span-1">
           <Logo className="h-14" />
-          <p className="mt-4 text-sm text-muted-foreground">Rede de academias em Manaus — Amazonas.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Rede de academias em Manaus — Amazonas.
+          </p>
         </div>
         <div>
           <p className={col}>Top Fit</p>
-          <Link to="/" hash="experiencia" className={link}>Sobre</Link>
-          <Link to="/" hash="estrutura" className={link}>Estrutura</Link>
-          <Link to="/" hash="modalidades" className={link}>Modalidades</Link>
+          <Link to="/" hash="experiencia" className={link}>
+            Sobre
+          </Link>
+          <Link to="/" hash="estrutura" className={link}>
+            Estrutura
+          </Link>
+          <Link to="/" hash="modalidades" className={link}>
+            Modalidades
+          </Link>
         </div>
         <div>
           <p className={col}>Academias</p>
@@ -29,16 +37,26 @@ export function Footer() {
         </div>
         <div>
           <p className={col}>Ajuda</p>
-          <Link to="/" hash="aula-experimental" className={link}>Fale conosco</Link>
-          <Link to="/" hash="faq" className={link}>Perguntas frequentes</Link>
+          <Link to="/" hash="aula-experimental" className={link}>
+            Fale conosco
+          </Link>
+          <Link to="/" hash="faq" className={link}>
+            Perguntas frequentes
+          </Link>
           {/* PLACEHOLDER: páginas de Política de privacidade e Termos de uso */}
-          <span className={link}>Política de privacidade (em breve)</span>
-          <span className={link}>Termos de uso (em breve)</span>
+          <Link to="/privacidade" className={link}>
+            Privacidade
+          </Link>
+          <Link to="/termos" className={link}>
+            Condições de atendimento
+          </Link>
         </div>
         <div>
           <p className={col}>Redes sociais</p>
           {INSTAGRAM_URL ? (
-            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className={link}>Instagram</a>
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className={link}>
+              Instagram
+            </a>
           ) : (
             <span className={link}>Instagram (em breve)</span>
           )}

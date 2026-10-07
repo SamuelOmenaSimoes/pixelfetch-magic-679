@@ -1,7 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import logoAsset from "@/assets/topfit-logo.jpg.asset.json";
 
 export const cta = cva(
   "inline-flex items-center justify-center gap-2 font-display font-extrabold italic uppercase tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] rounded-sm",
@@ -10,7 +9,8 @@ export const cta = cva(
       variant: {
         primary: "bg-primary text-primary-foreground hover:brightness-110 hover:-translate-y-0.5",
         blue: "bg-secondary text-secondary-foreground hover:brightness-110 hover:-translate-y-0.5",
-        outline: "border-2 border-foreground/80 text-foreground hover:bg-foreground hover:text-background",
+        outline:
+          "border-2 border-foreground/80 text-foreground hover:bg-foreground hover:text-background",
         ghost: "text-foreground underline-offset-4 hover:text-primary hover:underline",
         dark: "bg-paper-foreground text-paper hover:bg-secondary",
       },
@@ -26,10 +26,26 @@ export const cta = cva(
 export type CtaProps = VariantProps<typeof cta>;
 
 export function Logo({ className }: { className?: string }) {
-  return <img src={logoAsset.url} alt="Top Fit Academia" className={cn("h-10 w-auto rounded-sm", className)} />;
+  return (
+    <img
+      src="/topfit-logo.jpg"
+      alt="Top Fit Academia"
+      width={180}
+      height={60}
+      className={cn("h-10 w-auto max-w-[120px] object-contain sm:max-w-[160px]", className)}
+    />
+  );
 }
 
-export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -53,7 +69,15 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
   );
 }
 
-export function SectionTitle({ eyebrow, lines, className }: { eyebrow?: string; lines: [string, string]; className?: string }) {
+export function SectionTitle({
+  eyebrow,
+  lines,
+  className,
+}: {
+  eyebrow?: string;
+  lines: [string, string];
+  className?: string;
+}) {
   return (
     <div className={className}>
       {eyebrow && <p className="eyebrow mb-4 text-primary">{eyebrow}</p>}

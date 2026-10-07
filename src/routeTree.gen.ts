@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ComeceAgoraRouteImport } from './routes/comece-agora'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as TermosRouteImport } from './routes/termos'
+import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as UnidadesSlugRouteImport } from './routes/unidades.$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,9 +22,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ComeceAgoraRoute = ComeceAgoraRouteImport.update({
   id: '/comece-agora',
   path: '/comece-agora',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnidadesSlugRoute = UnidadesSlugRouteImport.update({
@@ -31,31 +55,69 @@ const UnidadesSlugRoute = UnidadesSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/comece-agora': typeof ComeceAgoraRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/api/$': typeof ApiSplatRoute
   '/unidades/$slug': typeof UnidadesSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/comece-agora': typeof ComeceAgoraRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/api/$': typeof ApiSplatRoute
   '/unidades/$slug': typeof UnidadesSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/comece-agora': typeof ComeceAgoraRoute
+  '/privacidade': typeof PrivacidadeRoute
+  '/termos': typeof TermosRoute
+  '/api/$': typeof ApiSplatRoute
   '/unidades/$slug': typeof UnidadesSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/comece-agora' | '/unidades/$slug'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/comece-agora'
+    | '/privacidade'
+    | '/termos'
+    | '/api/$'
+    | '/unidades/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/comece-agora' | '/unidades/$slug'
-  id: '__root__' | '/' | '/comece-agora' | '/unidades/$slug'
+  to:
+    | '/'
+    | '/admin'
+    | '/comece-agora'
+    | '/privacidade'
+    | '/termos'
+    | '/api/$'
+    | '/unidades/$slug'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/comece-agora'
+    | '/privacidade'
+    | '/termos'
+    | '/api/$'
+    | '/unidades/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   ComeceAgoraRoute: typeof ComeceAgoraRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
+  TermosRoute: typeof TermosRoute
+  ApiSplatRoute: typeof ApiSplatRoute
   UnidadesSlugRoute: typeof UnidadesSlugRoute
 }
 
@@ -68,11 +130,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/comece-agora': {
       id: '/comece-agora'
       path: '/comece-agora'
       fullPath: '/comece-agora'
       preLoaderRoute: typeof ComeceAgoraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unidades/$slug': {
@@ -87,7 +177,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   ComeceAgoraRoute: ComeceAgoraRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
+  TermosRoute: TermosRoute,
+  ApiSplatRoute: ApiSplatRoute,
   UnidadesSlugRoute: UnidadesSlugRoute,
 }
 export const routeTree = rootRouteImport

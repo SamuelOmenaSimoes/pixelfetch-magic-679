@@ -1,0 +1,9 @@
+node_modules
+.output
+.wrangler
+.env
+.env.*
+.data
+backups
+.git
+*.sqlite*
