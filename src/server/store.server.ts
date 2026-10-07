@@ -7,6 +7,7 @@ import type { ContactRecord, ContactRequest } from "@/lib/contact-schema";
 
 let current: { path: string; db: DatabaseSync } | undefined;
 export function database() {
+  if (process.env["VERCEL"]) throw new Error("SQLITE_UNAVAILABLE_ON_VERCEL");
   const configured = process.env["TOPFIT_DATA_DIR"];
   if (process.env["NODE_ENV"] === "production" && !configured)
     throw new Error("TOPFIT_DATA_DIR_REQUIRED");
@@ -39,7 +40,7 @@ export function closeDatabase() {
   current = undefined;
 }
 export const digest = (value: string) => createHash("sha256").update(value).digest("hex");
-export function consumeLimit(key: string, max: number, windowMs: number) {
+function sqliteLimit(key: string, max: number, windowMs: number) {
   const db = database();
   const now = Date.now();
   db.prepare("DELETE FROM limits WHERE expires_at <= ?").run(now);
@@ -49,7 +50,7 @@ export function consumeLimit(key: string, max: number, windowMs: number) {
   const row = db.prepare("SELECT hits FROM limits WHERE key=?").get(key);
   return Number(row?.["hits"]) <= max;
 }
-export function saveContact(input: ContactRequest) {
+function sqliteSave(input: ContactRequest) {
   const db = database();
   const hash = digest(JSON.stringify(input));
   const existing = db
@@ -59,7 +60,7 @@ export function saveContact(input: ContactRequest) {
     return existing["payload_hash"] === hash
       ? { id: String(existing["id"]), duplicate: true }
       : null;
-  if (!consumeLimit("phone:" + digest(input.phone), 5, 30 * 60_000)) throw new Error("PHONE_LIMIT");
+  if (!sqliteLimit("phone:" + digest(input.phone), 5, 30 * 60_000)) throw new Error("PHONE_LIMIT");
   const id = randomUUID();
   const unit = units.find((u) => u.slug === input.unitSlug)!;
   const plan = plans.find((p) => p.id === input.planId && p.unitSlug === input.unitSlug);
@@ -87,7 +88,7 @@ export function saveContact(input: ContactRequest) {
   );
   return { id, duplicate: false };
 }
-export function listContacts(status: string, page: number) {
+function sqliteList(status: string, page: number) {
   const db = database();
   const where = status ? "WHERE status=?" : "";
   const args = status ? [status] : [];
@@ -117,4 +118,35 @@ export function listContacts(status: string, page: number) {
       status: r["status"],
     })) as ContactRecord[],
   };
+}
+
+function remote() {
+  if (process.env["DATABASE_URL"]) return true;
+  if (process.env["VERCEL"]) throw new Error("DATABASE_URL_REQUIRED");
+  return false;
+}
+export async function consumeLimit(key: string, max: number, windowMs: number) {
+  return remote()
+    ? (await import("./postgres.server")).consumeLimit(key, max, windowMs)
+    : sqliteLimit(key, max, windowMs);
+}
+export async function saveContact(input: ContactRequest) {
+  return remote() ? (await import("./postgres.server")).saveContact(input) : sqliteSave(input);
+}
+export async function listContacts(status: string, page: number) {
+  return remote()
+    ? (await import("./postgres.server")).listContacts(status, page)
+    : sqliteList(status, page);
+}
+export async function query(sql: string, args: (string | number)[] = []) {
+  if (remote()) {
+    let n = 0;
+    return (await import("./postgres.server")).query(
+      sql.replace(/\?/g, () => `$${++n}`),
+      args,
+    );
+  }
+  const stmt = database().prepare(sql);
+  if (/^SELECT/i.test(sql)) return { rows: stmt.all(...args), rowCount: 0 };
+  return { rows: [], rowCount: Number(stmt.run(...args).changes) };
 }
